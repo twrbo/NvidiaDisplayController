@@ -4,7 +4,10 @@ using namespace std;
 NvAPI_Status status;
 NvAPI_ShortString estring;
 
-//#define DEBUG
+const char* VERSION = "1.0.2";
+
+
+#define DEBUG
 
 //#define SHOW_ALL_DISPLAY
 
@@ -38,11 +41,10 @@ int main(int argc, char** argv)
 	}
 
 	// Launch INFO
-	const char* version = "1.0.2";
 	printf(" NvAPIs initialized successfully !\n");
 	CLI_NewLine();
 	printf(" Nvidia display controller is launched\n");
-	printf(" - Version: %s\n", version);
+	printf(" - Version: %s\n", VERSION);
 
 	// Set CLI
 	int gpuNum = gpuCount;
