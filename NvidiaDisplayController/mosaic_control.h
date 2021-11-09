@@ -4,6 +4,7 @@
 #include <assert.h>
 #include "nvapi.h"
 #include <vector>
+
 using namespace std;
 
 #define EXIT 99
@@ -34,7 +35,7 @@ NvAPI_Status IsNvAPI_Error(const char* NvAPI_Name);
 
 NvAPI_Status IsNvAPI_Error(const char* NvAPI_Name, NvU32 displayId);
 
-void CLI_GPU_INFO(vector<GPU_DISPLAY> gpuDisplay, int gpuNum, int*& displayNum);
+void CLI_GPU_INFO(vector<GPU_DISPLAY> gpuDisplay, int &gpuNum, int*& displayNum);
 
 void CLI_ConfigOption();
 
