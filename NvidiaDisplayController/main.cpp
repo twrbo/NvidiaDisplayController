@@ -255,7 +255,6 @@ NvAPI_Status Rotate_180(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex, int dispIn
 			return status;
 		}
 
-		// REMOVE or not ?
 		// The below is optional for R331+ in cases where the viewport rect!=scanoutRect
 		//NV_SCANOUT_INFORMATION scanoutInformation;
 		//scanoutInformation.version = NV_SCANOUT_INFORMATION_VER;
