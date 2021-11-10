@@ -53,7 +53,7 @@ int main(int argc, char** argv)
 	int* displayNum = new int[gpuNum];
 	int gpuIndex = 0, displayIndex = 0;
 	Config configOption = Config::rotate;
-
+	
 	// Start program
 	while (true)
 	{
@@ -187,8 +187,8 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 		}
 
 #ifdef SHOW_ALL_DISPLAY
-		temp.displayCount = dispIdCount;
-		gpuDisplay.push_back(temp);
+		gpuDisplay.push_back({ (int)dispIdCount-1 });
+		gpuDisplay[activeGPU].displayIDs.reserve(gpuDisplay[activeGPU].displayCount);
 #endif // SHOW_ALL_DISPLAY
 
 		NV_GPU_DISPLAYIDS* dispIds = NULL;
@@ -215,7 +215,7 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 		// Check the display is active or not 
 		for (int i = 0; i < dispIdCount; i++) {
 #ifdef SHOW_ALL_DISPLAY
-			gpuDisplay[gpu].displayIDs.push_back(dispIds[i]);
+			gpuDisplay[activeGPU].displayIDs.push_back(dispIds[i]);
 #endif // SHOW_ALL_DISPLAY
 
 #ifndef SHOW_ALL_DISPLAY
