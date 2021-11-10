@@ -1,13 +1,16 @@
 #include "mosaic_control.h"
+//using namespace std;
 
 NvAPI_Status status;
 NvAPI_ShortString estring;
 
-//#define DEBUG
+const char* VERSION = "1.0.2";
+
+#define DEBUG
 
 //#define SHOW_ALL_DISPLAY
 
-#define RESOLUTION
+#define SHOW_RESOLUTION
 
 // MENU
 int main(int argc, char** argv)
@@ -37,23 +40,24 @@ int main(int argc, char** argv)
 	}
 
 	// Launch INFO
-	const char* version = "1.0.1";
 	printf(" NvAPIs initialized successfully !\n");
 	CLI_NewLine();
 	printf(" Nvidia display controller is launched\n");
-	printf(" - Version: %s\n", version);
+	CLI_NewLine();
+	printf(" - Version: %s\n", VERSION);
+	printf(" - Company: AU Optronics Corp.\n");
+	printf(" - Author : Tony Kuo\n");
 
 	// Set CLI
 	int gpuNum = gpuCount;
 	int* displayNum = new int[gpuNum];
-
 	int gpuIndex = 0, displayIndex = 0;
 	Config configOption = Config::rotate;
 
 	// Start program
 	while (true)
 	{
-		//CLI_GPU_INFO(gpuDisplay);
+		// OUTPUT menu option
 		CLI_ConfigOption();
 
 		// INPUT config option
@@ -62,7 +66,7 @@ int main(int argc, char** argv)
 			CLI_NewLine();
 			getchar();
 			printf("*** INVALID config option ***\n");
-			printf(" Enter the valid number(integer only)\n");
+			printf(" - Enter the valid number(integer only)\n");
 			printf(">");
 		}
 
@@ -73,7 +77,7 @@ int main(int argc, char** argv)
 		case Config::rotate:
 			// Entered INFO
 			CLI_Divider();
-			printf("===         Config %d - Single Rotate         ===\n\n", Config::rotate);
+			printf("===          Config %d - Single Rotate         ===\n\n", Config::rotate);
 			CLI_GPU_INFO(gpuDisplay, gpuNum, displayNum);
 
 			// GPU INPUT INFO and check index is valid or not
@@ -98,7 +102,7 @@ int main(int argc, char** argv)
 		case Config::reset:
 			// Entered INFO
 			CLI_Divider();
-			printf("===          Config %d - Single RESET         ===\n\n", Config::reset);
+			printf("===          Config %d - Single RESET          ===\n\n", Config::reset);
 			CLI_GPU_INFO(gpuDisplay, gpuNum, displayNum);
 
 			// GPU INPUT INFO and check index is valid or not
@@ -123,7 +127,7 @@ int main(int argc, char** argv)
 		case Config::resetAll:
 			// Entered INFO
 			CLI_Divider();
-			printf("===           Config %d - ALL RESET           ===\n\n", Config::resetAll);
+			printf("===            Config %d - ALL RESET           ===\n\n", Config::resetAll);
 			CLI_GPU_INFO(gpuDisplay, gpuNum, displayNum);
 
 			// GPU INPUT INFO and check index is valid or not
@@ -141,7 +145,7 @@ int main(int argc, char** argv)
 			break;
 		default:
 			printf("*** INVALID config option ***\n");
-			printf(" Enter the valid number(integer only)\n");
+			printf(" - Enter the valid number(integer only)\n");
 			break;
 		}
 	}
@@ -154,8 +158,6 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 	NvU32 dispIdCount = 0;
 	NvU32 gpu;
 
-	GPU_DISPLAY temp;
-
 	// Get GPU handles
 	ZeroMemory(&nvGPUHandles, sizeof(nvGPUHandles));
 	status = NvAPI_EnumPhysicalGPUs(nvGPUHandles, &gpuCount);
@@ -164,6 +166,9 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 		IsNvAPI_Error("NvAPI_EnumPhysicalGPUs");
 		return status;
 	}
+
+	// Reserve the capacity
+	gpuDisplay.reserve(gpuCount);
 
 	// Query the active physical display connected to each gpu.
 	for (gpu = 0; gpu < gpuCount; gpu++)
@@ -175,8 +180,7 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 			return status;
 		}
 		if (dispIdCount == 0) {
-			temp.displayCount = 0; 
-			gpuDisplay.push_back(temp);
+			gpuDisplay.push_back({ 0 });
 			continue;
 		}
 
@@ -188,7 +192,7 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 		NV_GPU_DISPLAYIDS* dispIds = NULL;
 		dispIds = new NV_GPU_DISPLAYIDS[dispIdCount];
 		dispIds->version = NV_GPU_DISPLAYIDS_VER;
-		status = NvAPI_GPU_GetConnectedDisplayIds(nvGPUHandles[gpu], dispIds, &dispIdCount, 0);
+		status = NvAPI_GPU_GetConnectedDisplayIds(nvGPUHandles[gpu], dispIds, &dispIdCount, 0);  // dispIdCount exclude mosaic mode
 		if (status != NVAPI_OK)
 		{
 			delete[] dispIds;
@@ -198,25 +202,28 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 
 
 #ifndef SHOW_ALL_DISPLAY
-		// Get all display exclude mosaic mode
-		temp.displayCount = dispIdCount;
-		gpuDisplay.push_back(temp);
+		// Get all display except mosaic mode
+		gpuDisplay.push_back({ (int)dispIdCount });
+
+		// Reserve the capacity
+		gpuDisplay[gpu].displayIDs.reserve(gpuDisplay[gpu].displayCount);
 #endif // !SHOW_ALL_DISPLAY
 
 
-		// Filter for display divider(DHS-142)
 		// Check the display is active or not 
-		for (int i = 0; i < temp.displayCount; i++) {
+		for (int i = 0; i < dispIdCount; i++) {
 #ifdef SHOW_ALL_DISPLAY
 			gpuDisplay[gpu].displayIDs.push_back(dispIds[i]);
 #endif // SHOW_ALL_DISPLAY
 
 #ifndef SHOW_ALL_DISPLAY
-			if (dispIds[i].isActive) {
+			if (dispIds[i].isActive) 
+			{
 				gpuDisplay[gpu].displayIDs.push_back(dispIds[i]);
 			}
-			else {
-				gpuDisplay[gpu].displayCount--; // -1 means excluding DHS
+			else 
+			{
+				gpuDisplay[gpu].displayCount--; // Exclude ports with DHS inserted
 			}
 #endif // !SHOW_ALL_DISPLAY
 		}
@@ -293,13 +300,13 @@ NvAPI_Status Rotate_180(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex, int dispIn
 		osRect.sWidth = dm.dmPelsWidth;
 		osRect.sHeight = dm.dmPelsHeight;
 
-#ifdef RESOLUTION
+#ifdef SHOW_RESOLUTION
 		CLI_NewLine();
 		printf(" desktopRect: sX = %6d, sY = %6d, sWidth = %6d sHeight = %6d\n", desktopRect.sX, desktopRect.sY, desktopRect.sWidth, desktopRect.sHeight);
 		//printf(" scanoutRect: sX = %6d, sY = %6d, sWidth = %6d sHeight = %6d\n", scanoutRect.sX, scanoutRect.sY, scanoutRect.sWidth, scanoutRect.sHeight);
 		//printf(" viewportRect: sX = %6d, sY = %6d, sWidth = %6d sHeight = %6d\n", viewportRect.sX, viewportRect.sY, viewportRect.sWidth, viewportRect.sHeight);
 		printf(" osRect:      sX = %6d, sY = %6d, sWidth = %6d sHeight = %6d\n", osRect.sX, osRect.sY, osRect.sWidth, osRect.sHeight);
-#endif // DEBUG
+#endif // SHOW_RESOLUTION
 
 
 
@@ -477,7 +484,7 @@ NvAPI_Status IsNvAPI_Error(const char* NvAPI_Name, NvU32 displayId)
 	return status;
 }
 
-void CLI_GPU_INFO(vector<GPU_DISPLAY> gpuDisplay, int gpuNum, int*& displayNum) {
+void CLI_GPU_INFO(vector<GPU_DISPLAY> gpuDisplay, int &gpuNum, int*& displayNum) {
 
 #ifndef DEBUG
 	for (int i = 0; i < gpuNum; i++)
@@ -487,47 +494,55 @@ void CLI_GPU_INFO(vector<GPU_DISPLAY> gpuDisplay, int gpuNum, int*& displayNum) 
 #endif // !DEBUG
 
 #ifdef DEBUG
+	NV_GPU_DISPLAYIDS *displayIDs= NULL;
 	gpuNum = 3;
-
-
-	for (int i = 0; i < gpuNum; i++)
+	for (int gpu = 0; gpu < gpuNum; gpu++)
 	{
-		displayNum[i] = 4;
+		displayNum[gpu] = 2;
+		vector<NV_GPU_DISPLAYIDS> vector_displayIDs;
+		displayIDs = new NV_GPU_DISPLAYIDS[displayNum[gpu]];
+
+		for (int display = 0; display < displayNum[gpu]; display++) {
+			vector_displayIDs.push_back(displayIDs[display]);
+		}
+		gpuDisplay.push_back({ displayNum[gpu], vector_displayIDs });
+		vector_displayIDs.clear();
+		vector_displayIDs.shrink_to_fit();
+
+		delete[] displayIDs;
 	}
-	displayNum[1] = 0;
 #endif // DEBUG
 
-
+	int formatLen = 12;
 	const char* rowName[] = { "GPUIndex", "DisplayIndex", "DisplayID" };
 
-	printf("---          GPU & DISPLAY INFO LIST         ---\n");
+	printf("---          GPU & DISPLAY INFO LIST          ---\n");
 	CLI_NewLine();
-	int formatLen = 13;
-	printf("%*s  %*s  %*s\n", formatLen, rowName[0], formatLen, rowName[1], formatLen, rowName[2]);
+	printf("%*s     %*s  %*s\n", formatLen, rowName[0], formatLen, rowName[1], formatLen, rowName[2]);
 	CLI_NewLine();
 	for (int gpu = 0; gpu < gpuNum; gpu++)
 	{
 		for (int display = 0; display < displayNum[gpu]; display++)
 		{
-#ifndef DEBUG
-			printf("%13d  %13d      0x%08x\n", gpu, display, gpuDisplay[gpu].displayIDs[display].displayId);
-			printf("     --------------------------------------     \n");
-#endif // !DEBUG
-
-#ifdef DEBUG
-			printf("%13d  %13d  %13d\n", gpu, display, display);
-			printf("     --------------------------------------     \n");
-#endif // DEBUG
-
+			// #:0x,	0: padding with 0,	8: bit num
+			//printf("%13d  %13d      %#08x", gpu, display, gpuDisplay[gpu].displayIDs[display].displayId);
+			printf("%*d     %*d     %#08x",
+				formatLen, gpu,
+				formatLen, display,
+				gpuDisplay[gpu].displayIDs[display].displayId);
+			if (gpuDisplay[gpu].displayIDs[display].isDynamic)
+				printf("(DHS)\n");
+			printf(" -------------------------------------------------\n");
 		}
 	}
 	CLI_NewLine();
 }
 
 void CLI_ConfigOption() {
+	CLI_NewLine();
 	CLI_Divider();
-	printf("===                Config Menu               ===\n\n");
-	printf(" Enter the number to select the config\n\n");
+	printf("===                Config Menu                ===\n\n");
+	printf(" - Enter the number to select the config\n\n");
 	printf(" %d. Single Rotate 180\n", Config::rotate);
 	printf(" %d. Single RESET\n", Config::reset);
 	printf(" %d. All RESET\n", Config::resetAll);
@@ -538,7 +553,7 @@ void CLI_NewLine() {
 }
 
 void CLI_Divider() {
-	const char* divider = "------------------------------------------------\n";
+	const char* divider = "-------------------------------------------------\n";
 	printf("%s", divider);
 }
 
