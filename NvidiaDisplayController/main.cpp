@@ -6,7 +6,7 @@ NvAPI_ShortString estring;
 
 const char* VERSION = "1.0.2";
 
-#define DEBUG
+//#define DEBUG
 
 //#define SHOW_ALL_DISPLAY
 
@@ -127,7 +127,7 @@ int main(int argc, char** argv)
 		case Config::resetAll:
 			// Entered INFO
 			CLI_Divider();
-			printf("===            Config %d - ALL RESET           ===\n\n", Config::resetAll);
+			printf("===            Config %d - All RESET           ===\n\n", Config::resetAll);
 			CLI_GPU_INFO(gpuDisplay, gpuNum, displayNum);
 
 			// GPU INPUT INFO and check index is valid or not
@@ -158,6 +158,8 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 	NvU32 dispIdCount = 0;
 	NvU32 gpu;
 
+	int activeGPU = 0;
+
 	// Get GPU handles
 	ZeroMemory(&nvGPUHandles, sizeof(nvGPUHandles));
 	status = NvAPI_EnumPhysicalGPUs(nvGPUHandles, &gpuCount);
@@ -180,7 +182,7 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 			return status;
 		}
 		if (dispIdCount == 0) {
-			gpuDisplay.push_back({ 0 });
+			//gpuDisplay.push_back({ 0 });
 			continue;
 		}
 
@@ -206,7 +208,7 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 		gpuDisplay.push_back({ (int)dispIdCount });
 
 		// Reserve the capacity
-		gpuDisplay[gpu].displayIDs.reserve(gpuDisplay[gpu].displayCount);
+		gpuDisplay[activeGPU].displayIDs.reserve(gpuDisplay[activeGPU].displayCount);
 #endif // !SHOW_ALL_DISPLAY
 
 
@@ -219,17 +221,20 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 #ifndef SHOW_ALL_DISPLAY
 			if (dispIds[i].isActive) 
 			{
-				gpuDisplay[gpu].displayIDs.push_back(dispIds[i]);
+				gpuDisplay[activeGPU].displayIDs.push_back(dispIds[i]);
 			}
 			else 
 			{
-				gpuDisplay[gpu].displayCount--; // Exclude ports with DHS inserted
+				gpuDisplay[activeGPU].displayCount--; // Exclude ports with DHS inserted
 			}
 #endif // !SHOW_ALL_DISPLAY
 		}
 
+		activeGPU++;
 		delete[] dispIds;
 	}
+
+	gpuCount = activeGPU;
 	return status;
 }
 
@@ -530,8 +535,10 @@ void CLI_GPU_INFO(vector<GPU_DISPLAY> gpuDisplay, int &gpuNum, int*& displayNum)
 				formatLen, gpu,
 				formatLen, display,
 				gpuDisplay[gpu].displayIDs[display].displayId);
-			if (gpuDisplay[gpu].displayIDs[display].isDynamic)
+			if (!gpuDisplay[gpu].displayIDs[display].isPhysicallyConnected)
 				printf("(DHS)\n");
+			else
+				printf("\n");
 			printf(" -------------------------------------------------\n");
 		}
 	}
