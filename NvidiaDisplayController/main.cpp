@@ -1,11 +1,10 @@
 #include "mosaic_control.h"
-using namespace std;
+//using namespace std;
 
 NvAPI_Status status;
 NvAPI_ShortString estring;
 
 const char* VERSION = "1.0.2";
-
 
 #define DEBUG
 
@@ -44,19 +43,21 @@ int main(int argc, char** argv)
 	printf(" NvAPIs initialized successfully !\n");
 	CLI_NewLine();
 	printf(" Nvidia display controller is launched\n");
+	CLI_NewLine();
 	printf(" - Version: %s\n", VERSION);
+	printf(" - Company: AU Optronics Corp.\n");
+	printf(" - Author : Tony Kuo\n");
 
 	// Set CLI
 	int gpuNum = gpuCount;
 	int* displayNum = new int[gpuNum];
-
 	int gpuIndex = 0, displayIndex = 0;
 	Config configOption = Config::rotate;
 
 	// Start program
 	while (true)
 	{
-		//CLI_GPU_INFO(gpuDisplay);
+		// OUTPUT menu option
 		CLI_ConfigOption();
 
 		// INPUT config option
@@ -166,6 +167,9 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 		return status;
 	}
 
+	// Reserve the capacity
+	gpuDisplay.reserve(gpuCount);
+
 	// Query the active physical display connected to each gpu.
 	for (gpu = 0; gpu < gpuCount; gpu++)
 	{
@@ -200,9 +204,12 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 #ifndef SHOW_ALL_DISPLAY
 		// Get all display except mosaic mode
 		gpuDisplay.push_back({ (int)dispIdCount });
+
+		// Reserve the capacity
+		gpuDisplay[gpu].displayIDs.reserve(gpuDisplay[gpu].displayCount);
 #endif // !SHOW_ALL_DISPLAY
 
-		// Exclude ports with display divider(DHS-142)
+
 		// Check the display is active or not 
 		for (int i = 0; i < dispIdCount; i++) {
 #ifdef SHOW_ALL_DISPLAY
@@ -533,6 +540,7 @@ void CLI_GPU_INFO(vector<GPU_DISPLAY> gpuDisplay, int &gpuNum, int*& displayNum)
 }
 
 void CLI_ConfigOption() {
+	CLI_NewLine();
 	CLI_Divider();
 	printf("===                Config Menu                ===\n\n");
 	printf(" - Enter the number to select the config\n\n");
