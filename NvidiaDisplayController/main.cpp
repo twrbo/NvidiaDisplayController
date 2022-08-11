@@ -4,15 +4,16 @@
 NvAPI_Status status;
 NvAPI_ShortString estring;
 
-const char* VERSION = "1.0.2";
+const char* VERSION = "1.0.3";
+const unsigned int PASSWORD = 1111;
 
-//#define DEBUG
+#define DEBUG
 
 //#define SHOW_ALL_DISPLAY
 
 #define SHOW_RESOLUTION
 
-// MENU
+
 int main(int argc, char** argv)
 {
 	// Initialize NVAPI
@@ -45,15 +46,17 @@ int main(int argc, char** argv)
 	printf(" Nvidia display controller is launched\n");
 	CLI_NewLine();
 	printf(" - Version: %s\n", VERSION);
-	printf(" - Company: AU Optronics Corp.\n");
+	printf(" - Company: AUO Corporation\n");
 	printf(" - Author : Tony Kuo\n");
 
 	// Set CLI
 	int gpuNum = gpuCount;
 	int* displayNum = new int[gpuNum];
 	int gpuIndex = 0, displayIndex = 0;
-	Config configOption = Config::rotate;
-	
+	Config configOption = Config::flip;
+	bool successed = true;
+	unsigned int password = 0;
+
 	// Start program
 	while (true)
 	{
@@ -74,74 +77,168 @@ int main(int argc, char** argv)
 
 		switch (configOption)
 		{
-		case Config::rotate:
-			// Entered INFO
-			CLI_Divider();
-			printf("===          Config %d - Single Rotate         ===\n\n", Config::rotate);
-			CLI_GPU_INFO(gpuDisplay, gpuNum, displayNum);
-
-			// GPU INPUT INFO and check index is valid or not
-			CLI_InputInfo("GPU", gpuIndex, gpuNum);
-			if (gpuIndex == EXIT)
-				break;
-
-			// Display INPUT INFO and check index is valid or not
-			CLI_NewLine();
-			CLI_InputInfo("DISPLAY", displayIndex, displayNum[gpuIndex]);
-			if (displayIndex == EXIT)
-				break;
-
-			//						Rotate 180
-			status = Rotate_180(gpuDisplay, gpuIndex, displayIndex);
-			if (status != NVAPI_OK)
-				printf("\n*** Single Rotate FAILED ***\n");
-			else
-				printf("\n Single Rotate Succeeded !\n");
-
+		case Config::flipAll:
+			successed = true;
+			for (gpuIndex = 0; gpuIndex < gpuNum; gpuIndex++) {
+				for (displayIndex = 0; displayIndex < gpuDisplay[gpuIndex].displayCount / 2; displayIndex++) {
+					status = Flip(gpuDisplay, gpuIndex, displayIndex);
+					if (status != NVAPI_OK) {
+						printf("\n*** Flip FAILED *** GPUIndex: %d, DisplayIndex: %d\n", gpuIndex, displayIndex);
+						successed = false;
+					}
+				}
+			}
+			if (successed)
+				printf("\n*** Flip the top half of the displays Successed !\n", gpuIndex, displayIndex);
 			break;
-		case Config::reset:
-			// Entered INFO
-			CLI_Divider();
-			printf("===          Config %d - Single RESET          ===\n\n", Config::reset);
-			CLI_GPU_INFO(gpuDisplay, gpuNum, displayNum);
+		case Config::superUser:
+			password = 0;
+			// Check password
+			while (password != PASSWORD)
+			{
+				printf(" - Enter the password\n");
+				printf(" - Exit code: %d\n", EXIT);
+				printf(">");
+				scanf_s("%d", &password);
+				if (password == EXIT)
+					break;
 
-			// GPU INPUT INFO and check index is valid or not
-			CLI_InputInfo("GPU", gpuIndex, gpuNum);
-			if (gpuIndex == EXIT)
+				getchar();
+				if (password != PASSWORD)
+					printf("*** INVALID password ***\n");
+				CLI_NewLine();
+			}
+
+			if (password != PASSWORD)
 				break;
 
-			// Display INPUT INFO and check index is valid or not
-			CLI_NewLine();
-			CLI_InputInfo("DISPLAY", displayIndex, displayNum[gpuIndex]);
-			if (displayIndex == EXIT)
-				break;
+			while (true) {
+				// OUTPUT menu option
+				CLI_AdvancedOption();
 
-			//						Rotate reset
-			status = RotateReset(gpuDisplay, gpuIndex, displayIndex);
-			if (status != NVAPI_OK)
-				printf("\n*** Single RESET FAILED ***\n");
-			else
-				printf("\n Single RESET Succeeded !\n");
+				// INPUT config option
+				printf(">");
+				while (scanf_s("%d", &configOption) != 1) {
+					CLI_NewLine();
+					getchar();
+					printf("*** INVALID config option ***\n");
+					printf(" - Enter the valid number(integer only)\n");
+					printf(">");
+				}
 
-			break;
-		case Config::resetAll:
-			// Entered INFO
-			CLI_Divider();
-			printf("===            Config %d - All RESET           ===\n\n", Config::resetAll);
-			CLI_GPU_INFO(gpuDisplay, gpuNum, displayNum);
+				CLI_NewLine();
 
-			// GPU INPUT INFO and check index is valid or not
-			CLI_InputInfo("GPU", gpuIndex, gpuNum);
-			if (gpuIndex == EXIT)
-				break;
+				switch (configOption)
+				{
+				case Config::flipAll:
+					successed = true;
+					for (gpuIndex = 0; gpuIndex < gpuNum; gpuIndex++) {
+						for (displayIndex = 0; displayIndex < gpuDisplay[gpuIndex].displayCount / 2; displayIndex++) {
+							status = Flip(gpuDisplay, gpuIndex, displayIndex);
+							if (status != NVAPI_OK) {
+								printf("\n*** Flip FAILED *** GPUIndex: %d, DisplayIndex: %d\n", gpuIndex, displayIndex);
+								successed = false;
+							}
+						}
+					}
+					if (successed)
+						printf("\n*** Flip the top half of the displays Successed !\n", gpuIndex, displayIndex);
+					break;
+				case Config::flip:
+					// Entered INFO
+					CLI_Divider();
+					printf("===          Config %d - Single Flip         ===\n\n", Config::flip);
+					CLI_GPU_INFO(gpuDisplay, gpuNum, displayNum);
 
-			//						Rotate reset all
-			status = RotateReset(gpuDisplay, gpuIndex);
-			if (status != NVAPI_OK)
-				printf("\n*** All RESET FAILED ***\n");
-			else
-				printf("\n All RESET Succeeded !\n");
+					// GPU INPUT INFO and check index is valid or not
+					CLI_InputInfo("GPU", gpuIndex, gpuNum);
+					if (gpuIndex == EXIT)
+						break;
 
+					// Display INPUT INFO and check index is valid or not
+					CLI_NewLine();
+					CLI_InputInfo("DISPLAY", displayIndex, displayNum[gpuIndex]);
+					if (displayIndex == EXIT)
+						break;
+
+					// Flip
+					status = Flip(gpuDisplay, gpuIndex, displayIndex);
+					if (status != NVAPI_OK)
+						printf("\n*** Single Flip FAILED ***\n");
+					else
+						printf("\n Single Flip Succeeded !\n");
+
+					break;
+				case Config::reset:
+					// Entered INFO
+					CLI_Divider();
+					printf("===          Config %d - Single Reset          ===\n\n", Config::reset);
+					CLI_GPU_INFO(gpuDisplay, gpuNum, displayNum);
+
+					// GPU INPUT INFO and check index is valid or not
+					CLI_InputInfo("GPU", gpuIndex, gpuNum);
+					if (gpuIndex == EXIT)
+						break;
+
+					// Display INPUT INFO and check index is valid or not
+					CLI_NewLine();
+					CLI_InputInfo("DISPLAY", displayIndex, displayNum[gpuIndex]);
+					if (displayIndex == EXIT)
+						break;
+
+					// Reset
+					status = FlipReset(gpuDisplay, gpuIndex, displayIndex);
+					if (status != NVAPI_OK)
+						printf("\n*** Single Reset FAILED ***\n");
+					else
+						printf("\n Single Reset Succeeded !\n");
+
+					break;
+				case Config::resetByGPU:
+					// Entered INFO
+					CLI_Divider();
+					printf("===            Config %d - reset by GPU           ===\n\n", Config::resetByGPU);
+					CLI_GPU_INFO(gpuDisplay, gpuNum, displayNum);
+
+					// GPU INPUT INFO and check index is valid or not
+					CLI_InputInfo("GPU", gpuIndex, gpuNum);
+					if (gpuIndex == EXIT)
+						break;
+
+					// Reset all
+					status = FlipReset(gpuDisplay, gpuIndex);
+					if (status != NVAPI_OK)
+						printf("\n*** All Reset FAILED ***\n");
+					else
+						printf("\n All Reset Succeeded !\n");
+
+					break;
+				case Config::resetAll:
+					successed = true;
+					for (gpuIndex = 0; gpuIndex < gpuNum; gpuIndex++) {
+						for (displayIndex = 0; displayIndex < gpuDisplay[gpuIndex].displayCount / 2; displayIndex++) {
+							status = FlipReset(gpuDisplay, gpuIndex, displayIndex);
+							if (status != NVAPI_OK) {
+								printf("\n*** Flip Reset FAILED *** GPUIndex: %d, DisplayIndex: %d\n", gpuIndex, displayIndex);
+								successed = false;
+							}
+						}
+					}
+					if (successed)
+						printf("\n*** Flip Reset Successed !\n", gpuIndex, displayIndex);
+					break;
+				case EXIT:
+					break;
+				default:
+					printf("*** INVALID config option ***\n");
+					printf(" - Enter the valid number(integer only)\n");
+					break;
+				}
+
+				if (configOption == EXIT)
+					break;
+			}
+		case EXIT:
 			break;
 		default:
 			printf("*** INVALID config option ***\n");
@@ -150,7 +247,6 @@ int main(int argc, char** argv)
 		}
 	}
 }
-
 
 NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 {
@@ -187,7 +283,7 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 		}
 
 #ifdef SHOW_ALL_DISPLAY
-		gpuDisplay.push_back({ (int)dispIdCount-1 });
+		gpuDisplay.push_back({ (int)dispIdCount - 1 });
 		gpuDisplay[activeGPU].displayIDs.reserve(gpuDisplay[activeGPU].displayCount);
 #endif // SHOW_ALL_DISPLAY
 
@@ -219,11 +315,11 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 #endif // SHOW_ALL_DISPLAY
 
 #ifndef SHOW_ALL_DISPLAY
-			if (dispIds[i].isActive) 
+			if (dispIds[i].isActive)
 			{
 				gpuDisplay[activeGPU].displayIDs.push_back(dispIds[i]);
 			}
-			else 
+			else
 			{
 				gpuDisplay[activeGPU].displayCount--; // Exclude ports with DHS inserted
 			}
@@ -238,8 +334,7 @@ NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount)
 	return status;
 }
 
-// Single rotate
-NvAPI_Status Rotate_180(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex, int dispIndex) {
+NvAPI_Status Flip(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex, int dispIndex) {
 	NvSBox desktopRect;
 	NvSBox scanoutRect; //portion of the desktop
 	//NvSBox viewportRect; //the viewport which is a subregion of the scanout
@@ -418,14 +513,14 @@ NvAPI_Status Rotate_180(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex, int dispIn
 		if (status != NVAPI_OK)
 		{
 			IsNvAPI_Error("NvAPI_GPU_SetScanoutWarping, display is not active");
+			return status;
 		}
 	}
 
 	return status;
 }
 
-// Single Reset
-NvAPI_Status RotateReset(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex, int displayIndex)
+NvAPI_Status FlipReset(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex, int displayIndex)
 {
 	NV_SCANOUT_WARPING_DATA warpingData;
 	int maxNumVertices = 0;
@@ -434,6 +529,7 @@ NvAPI_Status RotateReset(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex, int displ
 	warpingData.version = NV_SCANOUT_WARPING_VER;
 	warpingData.vertexFormat = NV_GPU_WARPING_VERTICE_FORMAT_TRIANGLESTRIP_XYUVRQ;
 	warpingData.vertices = NULL;
+	warpingData.textureRect = NULL;
 	warpingData.numVertices = 0;
 
 	status = NvAPI_GPU_SetScanoutWarping(gpuDisplay[gpuIndex].displayIDs[displayIndex].displayId, &warpingData, &maxNumVertices, &sticky);
@@ -446,8 +542,7 @@ NvAPI_Status RotateReset(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex, int displ
 	return status;
 }
 
-// Reset All
-NvAPI_Status RotateReset(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex)
+NvAPI_Status FlipReset(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex)
 {
 	NV_SCANOUT_WARPING_DATA warpingData;
 	int maxNumVertices = 0;
@@ -499,7 +594,7 @@ void CLI_GPU_INFO(vector<GPU_DISPLAY> gpuDisplay, int &gpuNum, int*& displayNum)
 #endif // !DEBUG
 
 #ifdef DEBUG
-	NV_GPU_DISPLAYIDS *displayIDs= NULL;
+	NV_GPU_DISPLAYIDS *displayIDs = NULL;
 	gpuNum = 3;
 	for (int gpu = 0; gpu < gpuNum; gpu++)
 	{
@@ -549,10 +644,22 @@ void CLI_ConfigOption() {
 	CLI_NewLine();
 	CLI_Divider();
 	printf("===                Config Menu                ===\n\n");
-	printf(" - Enter the number to select the config\n\n");
-	printf(" %d. Single Rotate 180\n", Config::rotate);
-	printf(" %d. Single RESET\n", Config::reset);
-	printf(" %d. All RESET\n", Config::resetAll);
+	printf(" %d. Flip the top half of the displays\n(Make sure plug the DP cable into the correct port)\n\n", Config::flipAll);
+	printf(" %d. Superuser\n", Config::superUser);
+	printf("\n - Enter the number to select the config\n");
+}
+
+void CLI_AdvancedOption() {
+	CLI_NewLine();
+	CLI_Divider();
+	printf("===                Config Menu                ===\n\n");
+	printf(" %d. Flip the top half of the displays\n(Make sure plug the DP cable into the correct port)\n", Config::flipAll);
+	printf(" %d. Single Flip\n", Config::flip);
+	printf(" %d. Single Reset\n", Config::reset);
+	printf(" %d. Reset by GPU\n", Config::resetByGPU);
+	printf(" %d. Reset All\n", Config::resetAll);
+	printf("\n - Enter the number to select the config\n");
+	printf(" - Exit code: %d\n", EXIT);
 }
 
 void CLI_NewLine() {
