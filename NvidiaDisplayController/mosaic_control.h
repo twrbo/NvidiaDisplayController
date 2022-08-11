@@ -16,20 +16,23 @@ typedef struct _GPU_DISPLAY {
 
 enum Config
 {
-	rotate = 1,
+	flipAll = 1, 
+	flip,
 	reset,
-	resetAll
+	resetByGPU,
+	resetAll,
+	superUser
 };
 
 int main(int argc, char** argv);
 
 NvAPI_Status GetGPUInfo(vector<GPU_DISPLAY>& gpuDisplay, NvU32& gpuCount);
 
-NvAPI_Status Rotate_180(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex, int dispIndex);
+NvAPI_Status Flip(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex, int dispIndex);
 
-NvAPI_Status RotateReset(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex, int displayIndex);
+NvAPI_Status FlipReset(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex, int displayIndex);
 
-NvAPI_Status RotateReset(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex);
+NvAPI_Status FlipReset(vector<GPU_DISPLAY> gpuDisplay, int gpuIndex);
 
 NvAPI_Status IsNvAPI_Error(const char* NvAPI_Name);
 
@@ -38,6 +41,8 @@ NvAPI_Status IsNvAPI_Error(const char* NvAPI_Name, NvU32 displayId);
 void CLI_GPU_INFO(vector<GPU_DISPLAY> gpuDisplay, int &gpuNum, int*& displayNum);
 
 void CLI_ConfigOption();
+
+void CLI_AdvancedOption();
 
 void CLI_NewLine();
 
